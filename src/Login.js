@@ -1,15 +1,14 @@
-// src/Login.js
 import React, { useState } from "react";
 
 function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setErrorMsg(null);
+    setErrorMsg("");
     setLoading(true);
 
     try {
@@ -19,24 +18,25 @@ function Login({ onLoginSuccess }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: username,
-          password: password,
+          username,
+          password,
         }),
       });
 
       if (!response.ok) {
-        // 401 or 403, etc.
         throw new Error("Invalid username or password");
       }
 
       const data = await response.json();
 
-      // Adjust "data.jwt" if your backend uses a different property name.
-      if (!data.jwt) {
-        throw new Error("No JWT found in response");
+      // ⚠️ Adjust the property name if your backend uses something else.
+      // e.g., data.token or data.jwtToken
+      const token = data.jwt || data.token || data.jwtToken;
+      if (!token) {
+        throw new Error("JWT not found in response");
       }
 
-      onLoginSuccess(data.jwt, username);
+      onLoginSuccess(token, username);
       setPassword("");
     } catch (err) {
       console.error(err);
@@ -47,31 +47,33 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "2rem auto" }}>
-      <h2>Login</h2>
+    <div style={{ maxWidth: 400, margin: "2rem auto" }}>
+      <h1>Login</h1>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "1rem" }}>
-          <label>
+          <label htmlFor="username">
             Username:
             <input
+              id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              style={{ display: "block", width: "100%", marginTop: "0.25rem" }}
+              style={{ display: "block", width: "100%", marginTop: 4, padding: 8 }}
             />
           </label>
         </div>
 
         <div style={{ marginBottom: "1rem" }}>
-          <label>
+          <label htmlFor="password">
             Password:
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{ display: "block", width: "100%", marginTop: "0.25rem" }}
+              style={{ display: "block", width: "100%", marginTop: 4, padding: 8 }}
             />
           </label>
         </div>
@@ -86,7 +88,7 @@ function Login({ onLoginSuccess }) {
       </form>
 
       <div style={{ marginTop: "1rem" }}>
-        <p>Test users (from hw3):</p>
+        <p>Test accounts (from hw3):</p>
         <ul>
           <li>user / user</li>
           <li>admin / admin</li>
@@ -97,3 +99,4 @@ function Login({ onLoginSuccess }) {
 }
 
 export default Login;
+
