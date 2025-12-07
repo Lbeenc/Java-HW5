@@ -1,7 +1,6 @@
-// src/App.js
 import React, { useState } from "react";
-import Login from "./Login";
-import StudentTable from "./StudentTable";
+import Login from "./components/Login";
+import StudentTable from "./components/StudentTable";
 
 function App() {
   const [jwt, setJwt] = useState(null);
@@ -18,7 +17,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: 16 }}>
       {jwt ? (
         <StudentTable
           jwt={jwt}
@@ -33,3 +32,4 @@ function App() {
 }
 
 export default App;
+
