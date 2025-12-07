@@ -1,95 +1,114 @@
-// src/StudentTable.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import SearchBox from "./SearchBox";
 
-function StudentTable({ jwt, username, onSignOut }) {
+export default function StudentTable({ jwt, username, onSignOut }) {
   const [students, setStudents] = useState([]);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const loadStudents = async () => {
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const response = await fetch("http://localhost:8080/students", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + jwt,
-        },
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        // Token invalid/expired – force logout
-        setErrorMsg("Your session has expired. Please log in again.");
-        onSignOut();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to load students");
-      }
-
-      const data = await response.json();
-      setStudents(data);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || "Error while loading students");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (jwt) {
-      loadStudents();
+    async function fetchStudents() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("http://localhost:8080/students", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${jwt}`,
+          },
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          setError("Session expired. Please log in again.");
+          onSignOut();
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        setStudents(data);
+      } catch (e) {
+        console.error(e);
+        setError(e.message || "Failed to load students");
+      } finally {
+        setLoading(false);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jwt]);
+
+    if (jwt) {
+      fetchStudents();
+    }
+  }, [jwt, onSignOut]);
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return students;
+
+    return students.filter((s) => {
+      const id = String(s.studentId ?? s.id ?? "").toLowerCase();
+      const name = String(s.name ?? "").toLowerCase();
+      const major = String(s.major ?? "").toLowerCase();
+      // Intentionally ignore Year (same as HW4)
+      return id.includes(q) || name.includes(q) || major.includes(q);
+    });
+  }, [students, searchTerm]);
 
   return (
-    <div style={{ maxWidth: "800px", margin: "2rem auto" }}>
+    <div>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: "1rem",
+          alignItems: "center",
+          marginBottom: 12,
         }}
       >
-        <h2>Student Table</h2>
+        <h1>Students</h1>
         <div>
-          {username && <span style={{ marginRight: "1rem" }}>Hello, {username}</span>}
+          {username && (
+            <span style={{ marginRight: 12 }}>Hello, {username}</span>
+          )}
           <button onClick={onSignOut}>Sign Out</button>
         </div>
       </div>
 
-      {loading && <p>Loading students...</p>}
-      {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
+      <SearchBox value={searchTerm} onChange={setSearchTerm} />
 
-      {!loading && students.length === 0 && !errorMsg && (
+      {loading && <div>Loading...</div>}
+      {error && <div style={{ color: "crimson" }}>Error: {error}</div>}
+
+      {!loading && !error && filtered.length === 0 && (
         <p>No students found.</p>
       )}
 
-      {students.length > 0 && (
+      {!loading && !error && filtered.length > 0 && (
         <table
           border="1"
           cellPadding="8"
-          style={{ borderCollapse: "collapse", width: "100%" }}
+          cellSpacing="0"
+          style={{ width: "100%" }}
         >
           <thead>
             <tr>
-              <th>Id</th>
-              <th>Student Name</th>
-              <th>GPA</th>
-              {/* add other columns if your hw4 had more */}
+              <th>StudentId</th>
+              <th>Name</th>
+              <th>Major</th>
+              <th>Year</th>
             </tr>
           </thead>
           <tbody>
-            {students.map((s) => (
-              <tr key={s.id}>
-                <td>{s.id}</td>
+            {filtered.map((s) => (
+              <tr key={s.studentId ?? s.id}>
+                <td>{s.studentId ?? s.id}</td>
                 <td>{s.name}</td>
-                <td>{s.gpa}</td>
+                <td>{s.major}</td>
+                <td>{s.year}</td>
               </tr>
             ))}
           </tbody>
@@ -98,5 +117,3 @@ function StudentTable({ jwt, username, onSignOut }) {
     </div>
   );
 }
-
-export default StudentTable;
